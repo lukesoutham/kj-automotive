@@ -51,7 +51,7 @@
 
 <script>
 const cv=document.getElementById('gl');
-const gl=cv.getContext('webgl',{antialias:false,alpha:false,premultipliedAlpha:false});
+const gl=cv.getContext('webgl',{antialias:false,alpha:false,premultipliedAlpha:false,preserveDrawingBuffer:true});
 const VERT=`attribute vec2 p;varying vec2 vUv;void main(){vUv=vec2(p.x*.5+.5, .5-p.y*.5);gl_Position=vec4(p,0.,1.);}`;
 const FRAG=`
 precision highp float;
