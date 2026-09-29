@@ -83,10 +83,11 @@ function eyeFor(az,el,zoom){
 let curStage=-1, pending=false;
 function apply(){
   pending=false;
-  const r=track.getBoundingClientRect(), total=track.offsetHeight-innerHeight;
-  const p=clamp((-r.top)/total,0,0.9999);
-  const seg=p*(STAGES.length-1), i=Math.floor(seg), f=smooth(seg-i);
-  const a=STAGES[i], b=STAGES[Math.min(i+1,STAGES.length-1)];
+  const r=track.getBoundingClientRect(), total=Math.max(1, track.offsetHeight-innerHeight);
+  let p=(-r.top)/total; if(!isFinite(p))p=0; p=clamp(p,0,0.9999);
+  let seg=p*(STAGES.length-1); if(!isFinite(seg))seg=0;
+  const i=clamp(Math.floor(seg),0,STAGES.length-2), f=smooth(seg-i);
+  const a=STAGES[i], b=STAGES[i+1];
   const az=a.az+(b.az-a.az)*f, el=a.el+(b.el-a.el)*f, zoom=a.zoom+(b.zoom-a.zoom)*f;
   if(API&&C){ API.setCameraLookAt(eyeFor(az,el,zoom), C, 0); }
   rail.style.width=(p*100).toFixed(1)+'%';
@@ -109,8 +110,7 @@ client.init(UID,{
       api.getCameraLookAt(function(err, cam){
         if(!err && cam){ C=cam.target.slice ? cam.target : [cam.target[0],cam.target[1],cam.target[2]];
           const eye=cam.position; base=[eye[0]-C[0], eye[1]-C[1], eye[2]-C[2]]; R=Math.hypot(base[0],base[1],base[2])||1; }
-        loader.classList.add('hide'); apply();
-        window.__ready=true;
+        loader.classList.add('hide'); window.__ready=true; try{apply();}catch(e){}
       });
     });
   },
