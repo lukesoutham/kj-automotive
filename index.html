@@ -100,6 +100,7 @@
   /* static hero (phones / reduced motion) */
   .static-hero{display:none;position:relative;z-index:1;min-height:100svh;overflow:hidden}
   .static-hero .poster{position:absolute}
+  .static-hero .sh-vid{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;z-index:0}
   .static-hero .inner{position:relative;z-index:4;display:flex;flex-direction:column;justify-content:flex-end;min-height:100svh;padding:26px 24px calc(96px + env(safe-area-inset-bottom,0))}
   .static-hero .h{font-size:clamp(40px,11vw,72px)}
 
@@ -184,13 +185,10 @@
     .hero{display:none}
     .static-hero{display:block}
   }
-  /* mobile scrub polish: give captions room on narrow portrait screens */
+  /* phones: skip the scroll-scrub entirely, play the cinematic clip as an autoplay hero */
   @media (max-width:720px){
-    .cap.b1{top:14vh}
-    .cap .h{font-size:clamp(38px,11vw,60px)}
-    .cap .sub{font-size:16px}
-    .cap.b3{bottom:22vh}
-    .hero{height:200vh}
+    .hero{display:none}
+    .static-hero{display:block}
   }
   @media (max-height:560px){.cue{display:none}}
   @media (prefers-reduced-motion:reduce){
@@ -253,6 +251,9 @@
 <!-- STATIC HERO (phones, reduced motion) -->
 <header class="static-hero">
   <div class="poster" style="background-image:url(assets/hero-poster.jpg)" aria-hidden="true"></div>
+  <video class="sh-vid" muted playsinline preload="auto" poster="assets/hero-poster.jpg" aria-hidden="true" tabindex="-1">
+    <source src="assets/hero-mobile.mp4" type="video/mp4">
+  </video>
   <div class="scrim"></div><div class="vig"></div>
   <div class="inner">
     <span class="k mono" style="color:var(--accent2)">Salem, Utah &middot; Mobile Auto Repair</span>
@@ -482,7 +483,15 @@
   var scrubOn=false;
   function enableScrub(){ if(scrubOn)return; scrubOn=true; startLoad(); addEventListener('scroll',onScroll,{passive:true}); bands.forEach(function(b){b.op=-1;b.k=-1;}); updateCaptions(heroProgress()); onScroll(); }
   function disableScrub(){ if(!scrubOn)return; scrubOn=false; removeEventListener('scroll',onScroll); if(rafId!==null){cancelAnimationFrame(rafId);rafId=null;} }
-  function applyHeroMode(){ if(GATES.some(function(q){return matchMedia(q).matches;})) disableScrub(); else enableScrub(); }
+  var shVid=document.querySelector('.static-hero .sh-vid');
+  function applyHeroMode(){
+    var reduce=matchMedia('(prefers-reduced-motion: reduce)').matches;
+    if(reduce || frameMode) disableScrub(); else enableScrub();
+    if(shVid){
+      if(frameMode && !reduce){ var p=shVid.play(); if(p&&p.catch)p.catch(function(){}); }
+      else { try{shVid.pause();}catch(e){} }
+    }
+  }
   MQLS.forEach(function(m){ m.addEventListener('change',applyHeroMode); });
   applyHeroMode();
 
