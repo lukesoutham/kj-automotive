@@ -190,7 +190,7 @@
     .cap .h{font-size:clamp(38px,11vw,60px)}
     .cap .sub{font-size:16px}
     .cap.b3{bottom:22vh}
-    .hero{height:240vh}
+    .hero{height:200vh}
   }
   @media (max-height:560px){.cue{display:none}}
   @media (prefers-reduced-motion:reduce){
@@ -344,7 +344,7 @@
       nav=document.getElementById('nav');
   // Phones/touch devices can't seek a video smoothly (iOS Safari lags and stalls),
   // so they scrub through pre-decoded image frames on a canvas instead.
-  var FRAME_COUNT=48;
+  var FRAME_COUNT=36;
   var frameMode = matchMedia('(max-width:720px)').matches || matchMedia('(pointer:coarse)').matches;
   var frames=[], framesReady=false, cx=canvas.getContext('2d');
   var caps=[].slice.call(document.querySelectorAll('.cap'));
@@ -445,7 +445,7 @@
   var target=0, shown=0, rafId=null, lastTick=0;
   function tick(now){
     var dt=Math.min(100, now-(lastTick||now)); lastTick=now;
-    var k=0.16; shown+=(target-shown)*(1-Math.pow(1-k,dt/16.667));
+    var k=frameMode?0.30:0.16; shown+=(target-shown)*(1-Math.pow(1-k,dt/16.667));
     if(Math.abs(target-shown)<0.0005){ shown=target; rafId=null; lastTick=0; } else { rafId=requestAnimationFrame(tick); }
     if(frameMode){ drawFrame(shown); } else { requestSeek(shown*(video.duration||6)); }
     updateCaptions(shown);
