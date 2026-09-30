@@ -10,8 +10,8 @@
 <meta property="og:title" content="KJ Automotive · Mobile Mechanic in Salem, Utah">
 <meta property="og:description" content="Real repair in your driveway. Honest prices, no tow, no waiting room.">
 <meta property="og:type" content="website">
-<meta property="og:url" content="https://lukesoutham.github.io/kj-automotive/">
-<meta property="og:image" content="https://lukesoutham.github.io/kj-automotive/assets/hero-ending.jpg">
+<meta property="og:url" content="https://REPLACE_AT_DEPLOY/">
+<meta property="og:image" content="https://REPLACE_AT_DEPLOY/assets/hero-ending.jpg">
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='7' fill='%230d0e11'/%3E%3Ctext x='16' y='22' font-family='Georgia,serif' font-size='16' font-weight='700' fill='%23e08a33' text-anchor='middle'%3EKJ%3C/text%3E%3C/svg%3E">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -62,6 +62,10 @@
   .poster{background-size:cover;background-position:center;z-index:0}
   #hero{z-index:1;opacity:0;transition:opacity .8s var(--e1);will-change:transform;transform:translateZ(0)}
   .stage.video-ready #hero{opacity:1}
+  #hero-frames{position:absolute;inset:0;width:100%;height:100%;z-index:1;opacity:0;transition:opacity .6s var(--e1);display:none}
+  .stage.frames #hero-frames{display:block}
+  .stage.frames.video-ready #hero-frames{opacity:1}
+  .stage.frames #hero{display:none}
   .scrim{position:absolute;inset:0;z-index:2;pointer-events:none;background:radial-gradient(ellipse 120% 90% at 50% 46%,rgba(8,9,14,0) 34%,rgba(8,9,14,.6) 100%)}
   .vig{position:absolute;inset:0;z-index:2;pointer-events:none;box-shadow:inset 0 -160px 200px -60px rgba(8,9,12,.92),inset 0 120px 160px -80px rgba(8,9,12,.7)}
   .ringwrap{position:absolute;left:50%;bottom:64px;transform:translateX(-50%);z-index:5;color:var(--accent)}
@@ -209,6 +213,7 @@
   <div class="stage" id="stage">
     <div class="poster" id="poster" aria-hidden="true"></div>
     <video id="hero" muted playsinline aria-hidden="true" tabindex="-1"></video>
+    <canvas id="hero-frames" aria-hidden="true"></canvas>
     <div class="scrim"></div>
     <div class="vig"></div>
 
@@ -355,8 +360,14 @@
   var VIDEO_URL='assets/hero-scrub.mp4', VIDEO_BYTES=6259412;
   var track=document.getElementById('hero-track'), stage=document.getElementById('stage'),
       video=document.getElementById('hero'), poster=document.getElementById('poster'),
+      canvas=document.getElementById('hero-frames'),
       ring=document.querySelector('.ring circle'), cue=document.getElementById('cue'),
       nav=document.getElementById('nav');
+  // Phones/touch devices can't seek a video smoothly (iOS Safari lags and stalls),
+  // so they scrub through pre-decoded image frames on a canvas instead.
+  var FRAME_COUNT=48;
+  var frameMode = matchMedia('(max-width:720px)').matches || matchMedia('(pointer:coarse)').matches;
+  var frames=[], framesReady=false, cx=canvas.getContext('2d');
   var caps=[].slice.call(document.querySelectorAll('.cap'));
   var bands=caps.map(function(c){return {el:c,band:c.querySelector('.band'),a:parseFloat(c.dataset.a),b:parseFloat(c.dataset.b),op:-1,k:-1};});
 
@@ -383,6 +394,7 @@
   function startLoad(){
     if(loaded) return; loaded=true;
     poster.style.backgroundImage="url('assets/hero-poster.jpg')";
+    if(frameMode){ stage.classList.add('frames'); startFrames(); return; }
     fetch(VIDEO_URL).then(function(r){
       if(!r.body||!r.headers.get('Content-Length')){ return r.blob(); }
       var total=Number(r.headers.get('Content-Length'))||VIDEO_BYTES, reader=r.body.getReader(), chunks=[], got=0, last=0;
@@ -402,6 +414,41 @@
   }
   video.addEventListener('error',function(){ stage.classList.add('video-failed'); });
 
+  // ---- mobile frame scrub (canvas) ----
+  function startFrames(){
+    sizeCanvas();
+    var done=0;
+    frames=new Array(FRAME_COUNT);
+    for(var i=0;i<FRAME_COUNT;i++){ (function(i){
+      var im=new Image(); im.decoding='async';
+      im.onload=function(){ done++;
+        if(ring){ ring.style.setProperty('--ld', Math.round(126*(1-done/FRAME_COUNT))); }
+        if(!framesReady && frames[0] && frames[0].naturalWidth){ drawFrame(shown); }
+        if(done===FRAME_COUNT){ framesReady=true; drawFrame(shown); stage.classList.add('video-ready'); }
+      };
+      im.onerror=function(){ done++; if(done===FRAME_COUNT && !framesReady) stage.classList.add('video-failed'); };
+      im.src='assets/frames/f'+('00'+(i+1)).slice(-3)+'.jpg';
+      frames[i]=im;
+    })(i); }
+  }
+  function sizeCanvas(){
+    var dpr=Math.min(2, window.devicePixelRatio||1);
+    var w=stage.clientWidth, h=stage.clientHeight;
+    if(!w||!h) return;
+    canvas.width=Math.round(w*dpr); canvas.height=Math.round(h*dpr);
+    cx.setTransform(dpr,0,0,dpr,0,0);
+  }
+  function drawFrame(p){
+    if(!frames.length) return;
+    var idx=clamp(Math.round(p*(FRAME_COUNT-1)),0,FRAME_COUNT-1);
+    var im=frames[idx]; if(!im||!im.naturalWidth){ im=frames[0]; if(!im||!im.naturalWidth) return; }
+    var w=stage.clientWidth, h=stage.clientHeight;
+    var s=Math.max(w/im.naturalWidth, h/im.naturalHeight);
+    var dw=im.naturalWidth*s, dh=im.naturalHeight*s;
+    cx.drawImage(im,(w-dw)/2,(h-dh)/2,dw,dh);
+  }
+  addEventListener('resize',function(){ if(frameMode && frames.length){ sizeCanvas(); drawFrame(shown); } });
+
   // ---- gated seeks ----
   var seekBusy=false, pending=null, seekTO=null;
   function requestSeek(t){ if(!video.duration) return; t=t<0?0:(t>video.duration-0.03?video.duration-0.03:t); if(Math.abs(t-video.currentTime)<0.008){ return; } if(seekBusy){pending=t;return;} seekBusy=true; clearTimeout(seekTO); seekTO=setTimeout(function(){seekBusy=false;if(pending!==null){var p=pending;pending=null;requestSeek(p);}},250); try{video.currentTime=t;}catch(e){seekBusy=false;} }
@@ -419,7 +466,8 @@
     var dt=Math.min(100, now-(lastTick||now)); lastTick=now;
     var k=0.16; shown+=(target-shown)*(1-Math.pow(1-k,dt/16.667));
     if(Math.abs(target-shown)<0.0005){ shown=target; rafId=null; lastTick=0; } else { rafId=requestAnimationFrame(tick); }
-    requestSeek(shown*(video.duration||6)); updateCaptions(shown);
+    if(frameMode){ drawFrame(shown); } else { requestSeek(shown*(video.duration||6)); }
+    updateCaptions(shown);
     cue&&(cue.style.opacity=(1-smoothstep(shown,0,0.04)).toFixed(2));
     nav.classList.toggle('solid', (-track.getBoundingClientRect().top) > innerHeight*0.5);
   }
