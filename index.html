@@ -251,7 +251,7 @@
 <!-- STATIC HERO (phones, reduced motion) -->
 <header class="static-hero">
   <div class="poster" style="background-image:url(assets/hero-poster.jpg)" aria-hidden="true"></div>
-  <video class="sh-vid" muted playsinline preload="auto" poster="assets/hero-poster.jpg" aria-hidden="true" tabindex="-1">
+  <video class="sh-vid" autoplay muted loop playsinline preload="auto" poster="assets/hero-poster.jpg" aria-hidden="true" tabindex="-1">
     <source src="assets/hero-mobile.mp4" type="video/mp4">
   </video>
   <div class="scrim"></div><div class="vig"></div>
@@ -484,11 +484,19 @@
   function enableScrub(){ if(scrubOn)return; scrubOn=true; startLoad(); addEventListener('scroll',onScroll,{passive:true}); bands.forEach(function(b){b.op=-1;b.k=-1;}); updateCaptions(heroProgress()); onScroll(); }
   function disableScrub(){ if(!scrubOn)return; scrubOn=false; removeEventListener('scroll',onScroll); if(rafId!==null){cancelAnimationFrame(rafId);rafId=null;} }
   var shVid=document.querySelector('.static-hero .sh-vid');
+  var gestureArmed=false;
+  function playHeroVid(){ if(!shVid) return; try{shVid.muted=true;}catch(e){} var p=shVid.play(); if(p&&p.catch) p.catch(function(){ armGesture(); }); }
+  function armGesture(){
+    if(gestureArmed) return; gestureArmed=true;
+    function go(){ try{shVid.muted=true;}catch(e){} var p=shVid.play(); if(p&&p.then) p.then(clear).catch(function(){}); }
+    function clear(){ ['touchstart','pointerdown','click','scroll'].forEach(function(ev){ removeEventListener(ev,go); }); }
+    ['touchstart','pointerdown','click','scroll'].forEach(function(ev){ addEventListener(ev,go,{passive:true}); });
+  }
   function applyHeroMode(){
     var reduce=matchMedia('(prefers-reduced-motion: reduce)').matches;
     if(reduce || frameMode) disableScrub(); else enableScrub();
     if(shVid){
-      if(frameMode && !reduce){ var p=shVid.play(); if(p&&p.catch)p.catch(function(){}); }
+      if(frameMode && !reduce){ playHeroVid(); }
       else { try{shVid.pause();}catch(e){} }
     }
   }
