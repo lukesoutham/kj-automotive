@@ -492,6 +492,14 @@
     function clear(){ ['touchstart','pointerdown','click','scroll'].forEach(function(ev){ removeEventListener(ev,go); }); }
     ['touchstart','pointerdown','click','scroll'].forEach(function(ev){ addEventListener(ev,go,{passive:true}); });
   }
+  // retry play the instant the clip is ready and when it scrolls into view, so it starts on open (no wait)
+  function wantsVid(){ return shVid && frameMode && !matchMedia('(prefers-reduced-motion: reduce)').matches; }
+  if(shVid){
+    ['loadedmetadata','loadeddata','canplay','canplaythrough'].forEach(function(ev){ shVid.addEventListener(ev,function(){ if(wantsVid()) playHeroVid(); }); });
+    document.addEventListener('visibilitychange',function(){ if(!document.hidden && wantsVid()) playHeroVid(); });
+    if('IntersectionObserver' in window){ new IntersectionObserver(function(es){ if(es[0].isIntersecting && wantsVid()) playHeroVid(); },{threshold:0.1}).observe(shVid); }
+    try{ shVid.load(); }catch(e){}
+  }
   function applyHeroMode(){
     var reduce=matchMedia('(prefers-reduced-motion: reduce)').matches;
     if(reduce || frameMode) disableScrub(); else enableScrub();
