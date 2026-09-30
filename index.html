@@ -496,7 +496,7 @@
     var reduce=matchMedia('(prefers-reduced-motion: reduce)').matches;
     if(reduce || frameMode) disableScrub(); else enableScrub();
     if(shVid){
-      if(frameMode && !reduce){ playHeroVid(); }
+      if(frameMode && !reduce){ playHeroVid(); armGesture(); }
       else { try{shVid.pause();}catch(e){} }
     }
   }
