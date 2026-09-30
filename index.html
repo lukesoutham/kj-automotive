@@ -175,14 +175,18 @@
   .stagger.in>*:nth-child(4){transition-delay:.24s}
   .stagger.done>*{transition-delay:0s !important}
 
-  /* the five static-hero gates: keep in exact sync with GATES[] in JS */
-  @media (max-width:720px),
-         (orientation:portrait) and (max-width:1024px),
-         (orientation:portrait) and (pointer:coarse),
-         (orientation:landscape) and (pointer:coarse) and (max-height:560px),
-         (prefers-reduced-motion:reduce){
+  /* static-hero gate: keep in exact sync with GATES[] in JS. Mobile now gets the scrub too; only reduced-motion falls back. */
+  @media (prefers-reduced-motion:reduce){
     .hero{display:none}
     .static-hero{display:block}
+  }
+  /* mobile scrub polish: give captions room on narrow portrait screens */
+  @media (max-width:720px){
+    .cap.b1{top:14vh}
+    .cap .h{font-size:clamp(38px,11vw,60px)}
+    .cap .sub{font-size:16px}
+    .cap.b3{bottom:22vh}
+    .hero{height:360vh}
   }
   @media (max-height:560px){.cue{display:none}}
   @media (prefers-reduced-motion:reduce){
@@ -444,7 +448,7 @@
   var soon=null; function kickSoon(){ if(soon)return; soon=requestAnimationFrame(function(){ soon=null; updateCaptions(shown); }); }
 
   // ---- static-hero gate ----
-  var GATES=['(max-width: 720px)','(orientation: portrait) and (max-width: 1024px)','(orientation: portrait) and (pointer: coarse)','(orientation: landscape) and (pointer: coarse) and (max-height: 560px)','(prefers-reduced-motion: reduce)'];
+  var GATES=['(prefers-reduced-motion: reduce)'];
   var MQLS=GATES.map(function(q){return matchMedia(q);});
   var scrubOn=false;
   function enableScrub(){ if(scrubOn)return; scrubOn=true; startLoad(); addEventListener('scroll',onScroll,{passive:true}); bands.forEach(function(b){b.op=-1;b.k=-1;}); updateCaptions(heroProgress()); onScroll(); }
